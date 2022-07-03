@@ -1,14 +1,16 @@
 import base64
+import json
 import os
 import socket
 import sys
 import threading
-import json
+import time
 from pathlib import Path
 from time import sleep
 
 import cv2
 
+from SocketCommunication.JavaImageConnect import SendImageThread
 from SocketCommunication.util.DetectProductPositionByFiberSensors import detectProductPosition
 from camera import CamManager
 from communicate import S7_200Smart_PLC
@@ -111,14 +113,6 @@ class SeverThreading(threading.Thread):
                 params['ConveyorSpeed'] = conveyorSpeed
                 re["content"] = params
 
-            # 设置参数值
-            # elif isinstance(re['content'],cameraEntity):
-            #     print("cameraEntity: ===============================")
-            #
-            #
-            #     # self.camera.setParam('Height',45);
-            #     re['content'] = 'False....................'
-
 
             elif re['content'] == 'listenProductPosition':
                 self.plc_listen.connect_200smart("192.168.3.50")
@@ -130,49 +124,51 @@ class SeverThreading(threading.Thread):
                         sendmsg = json.dumps(re)
                         print("修改JSON数据并发送：")
                         print(sendmsg)
-                # severThreading = SeverThreading(self._socket)
-                # detect = threading.Thread(target=detectProductPosition(re,severThreading))
-                # detect.start()
 
                         # 发送字符串数据给Java端
                         self._socket.send(("%s" % sendmsg + "\r\n").encode(self._encoding))
                         sys.stdout.flush()
                         self._socket.close()
-                        sleep(1)
+                        print("关闭第一个socket")
+                        # sleep(1)
+                        print("开启SendImageThread线程")
+                        sendImage = SendImageThread()
+                        detect = threading.Thread(target=sendImage.connect())
+                        detect.start()
                     else:
                         re['content'] = 'False'
-                        print(re)
+                        # print(re)
 
-            elif re['content'] == 'catchImage':
-                yoloModel = YoloModel(CONFIGPATH / "bestm_tr.pt", CONFIGPATH / "LEDDetection_m_tr.yaml")
-                camManager = CamManager()
-                # 打开相机
-                camManager.getDeviceInfo(camManager.deviceList.pDeviceInfo[0])
-                camera = camManager.openDevice(0)
-                # 与拍摄方向绑定
-                camManager.setOrientation('left', camera)
-                # 从指定方向拍摄一帧
-                nparray = camManager.getOneFrame('left')
-                # 关闭相机
-                camera.closeDevice()
-                # 图像格式转换，从RGB转为BGR
-                imgBGR = cv2.cvtColor(nparray, cv2.COLOR_RGB2BGR)
-                hight = imgBGR.shape[0]
-                width = imgBGR.shape[1]
-                # 将图像裁剪为左右两部分
-                left = imgBGR[0:hight, 0:int(0.5 * width)]
-                right = imgBGR[0:hight, int(0.5 * width):width]
-                # 两部分分别都进行判断，图像结果存在im_中，json结果存在dict中
-                iml, content_dictl = yoloModel.run(left)
-                imr, content_dictr = yoloModel.run(right)
-                # 将结果图像拼接
-                im0 = cv2.hconcat([iml, imr])
-                # 图像格式转换，用于显示
-                cvRGBImg = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR)
-                encode_image = cv2.imencode(".jpg", cvRGBImg)[1]
-                byte_data = encode_image.tobytes()
-                base64_str = base64.b64encode(byte_data).decode("ascii")
-                re['content'] = base64_str
+            # elif re['content'] == 'catchImage':
+            #     yoloModel = YoloModel(CONFIGPATH / "bestm_tr.pt", CONFIGPATH / "LEDDetection_m_tr.yaml")
+            #     camManager = CamManager()
+            #     # 打开相机
+            #     camManager.getDeviceInfo(camManager.deviceList.pDeviceInfo[0])
+            #     camera = camManager.openDevice(0)
+            #     # 与拍摄方向绑定
+            #     camManager.setOrientation('left', camera)
+            #     # 从指定方向拍摄一帧
+            #     nparray = camManager.getOneFrame('left')
+            #     # 关闭相机
+            #     camera.closeDevice()
+            #     # 图像格式转换，从RGB转为BGR
+            #     imgBGR = cv2.cvtColor(nparray, cv2.COLOR_RGB2BGR)
+            #     hight = imgBGR.shape[0]
+            #     width = imgBGR.shape[1]
+            #     # 将图像裁剪为左右两部分
+            #     left = imgBGR[0:hight, 0:int(0.5 * width)]
+            #     right = imgBGR[0:hight, int(0.5 * width):width]
+            #     # 两部分分别都进行判断，图像结果存在im_中，json结果存在dict中
+            #     iml, content_dictl = yoloModel.run(left)
+            #     imr, content_dictr = yoloModel.run(right)
+            #     # 将结果图像拼接
+            #     im0 = cv2.hconcat([iml, imr])
+            #     # 图像格式转换，用于显示
+            #     cvRGBImg = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR)
+            #     encode_image = cv2.imencode(".jpg", cvRGBImg)[1]
+            #     byte_data = encode_image.tobytes()
+            #     base64_str = base64.b64encode(byte_data).decode("ascii")
+            #     re['content'] = base64_str
 
 
             # 修改JSON数据并转换成字符串
@@ -197,6 +193,7 @@ class SeverThreading(threading.Thread):
 
         print("任务结束.....")
         pass
+
 
     def __del__(self):
         pass
