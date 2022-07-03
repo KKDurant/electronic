@@ -26,8 +26,9 @@ if str(ROOT) not in sys.path:
 CONFIGPATH = Path(os.path.join("detectionModel"))
 
 class SeverThreading(threading.Thread):
-    def __init__(self, clientsocket, recvsize=1024 * 1024, encoding="utf-8"):
+    def __init__(self, clientsocket,yoloModel,recvsize=1024 * 1024, encoding="utf-8"):
         threading.Thread.__init__(self)
+        self.yoloModel = yoloModel
         self._socket = clientsocket
         self._recvsize = recvsize
         self._encoding = encoding
@@ -133,8 +134,9 @@ class SeverThreading(threading.Thread):
                         # sleep(1)
                         print("开启SendImageThread线程")
                         sendImage = SendImageThread()
-                        detect = threading.Thread(target=sendImage.connect())
+                        detect = threading.Thread(target=sendImage.connect,args=(self.yoloModel,))
                         detect.start()
+                        # sleep(2)
                     else:
                         re['content'] = 'False'
                         # print(re)
@@ -199,6 +201,8 @@ class SeverThreading(threading.Thread):
         pass
 
 def main():
+    yoloModel = YoloModel(CONFIGPATH / "bestm_tr.pt", CONFIGPATH / "LEDDetection_m_tr.yaml")
+
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     host = socket.gethostname()
@@ -216,8 +220,9 @@ def main():
     while True:
         clientsocket, addr = serversocket.accept()
         print("连接地址：%s" % str(addr))
+
         try:
-            startDevice = SeverThreading(clientsocket)
+            startDevice = SeverThreading(clientsocket,yoloModel)
             startDevice.start()
             pass
         except Exception as identifier:

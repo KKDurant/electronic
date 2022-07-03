@@ -9,7 +9,7 @@ import socket
 import cv2
 
 from camera import CamManager
-from detectionModel import YoloModel
+# from detectionModel import YoloModel
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # 根目录
@@ -20,20 +20,20 @@ CONFIGPATH = Path(os.path.join("detectionModel"))
 
 class SendImageThread(threading.Thread):
 
-    def connect(self):
+    def connect(self, yoloModel):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect(("192.168.3.100", 2580))
 
-        imageReturn = self.imageDetect()
+        imageReturn = self.imageDetect(yoloModel)
         sendmsg = json.dumps(imageReturn)
         # 发送字符串数据给Java端
         client_socket.send(("%s" % sendmsg + "\r\n").encode("utf-8"))
         sys.stdout.flush()
-        client_socket.close()
+        # client_socket.close()
 
 
-    def imageDetect(self):
-        yoloModel = YoloModel(CONFIGPATH / "bestm_tr.pt", CONFIGPATH / "LEDDetection_m_tr.yaml")
+    def imageDetect(self, yoloModel):
+        # yoloModel = YoloModel(CONFIGPATH / "bestm_tr.pt", CONFIGPATH / "LEDDetection_m_tr.yaml")
         camManager = CamManager()
         # 打开相机
         camManager.getDeviceInfo(camManager.deviceList.pDeviceInfo[0])
