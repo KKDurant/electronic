@@ -71,7 +71,13 @@ class CamManager():
         pic = self.cameras[orientation].getOneFrame(timeout)
         self.cameras[orientation].stopGrabbing()
         return pic
-    
+
+    def setCameraParams(self,orientation:str,param:str,value):
+        self.cameras[orientation].setParam(param,value)
+
+    def getCameraParams(self,orientation:str,param:str):
+        self.cameras[orientation].getParam(param)
+
     
 if __name__ == "__main__":
     camManager = CamManager()

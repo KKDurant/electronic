@@ -2,7 +2,7 @@ from time import sleep
 from PySide6.QtWidgets import QApplication,QMainWindow,QComboBox
 from PySide6.QtUiTools import QUiLoader
 from threading import Thread
-from mainWindowLogic import MainWindowLogic
+from mainWindowLogicOri import MainWindowLogic
 
 app = QApplication([])
 mainui = QUiLoader().load('ui/detection.ui')
