@@ -91,7 +91,7 @@ class SendImageThread(threading.Thread):
         re = {
             "type":"setDetectResult",
             "content":{
-                "isPinAsknew":pin_inclined_det, #针脚是否倾斜
+                "isPinAskew":pin_inclined_det, #针脚是否倾斜
                 "isPinGlue":pin_glue_det, # 针脚是否粘胶
                 "isGlueOut":glue_det, # 是否溢胶
                 "ImageResult":base64_str # 图片结果

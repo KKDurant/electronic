@@ -90,59 +90,47 @@ class SeverThreading(threading.Thread):
             elif re['type'] == 'getDeviceParams':
                 result = self._mainW.getParams('left')
                 result2 = self._mainW.getConveyorSpeed()
+                isConnect = {}
+                # 获取相机是否已连接
+                if result:
+                    # cameraLeftIsConnect = 'True'
+                    isConnect['cameraLeftIsConnect'] = 'True'
+                # 获取PLC是否已连接 如果能获取到传送带速度，那就是已连接的
+                if result2:
+                    isConnect['PLCIsConnect'] = 'True'
+
                 result.update(result2)
+                result.update(isConnect)
+
                 re['type'] = 'getDeviceParamsReply'
                 re['content'] = result
                 re["statusCode"] = 200
                 print(re)
-
-                # params = {}
-                # self.cameraManager = CamManager()
-                # self.cameraManager.getDeviceInfo(self.cameraManager.deviceList.pDeviceInfo[0])
-                # self.camera = self.cameraManager.openDevice(0)
-                # height = self.camera.getParam("Height")
-                # width = self.camera.getParam("Width")
-                # acquisitionFrameRate = self.camera.getParam("AcquisitionFrameRate")
-                # exposureTime = self.camera.getParam("ExposureTime")
-                # # 获取传送带速度
-                # self.plc_conveyorSpeed.connect_200smart("192.168.3.50")
-                # conveyorSpeed = self.conveyor.getSpeed()
-                # self.camera.closeDevice()
-                # params['Height'] = height
-                # params['Width'] = width
-                # params['AcquisitionFrameRate'] = acquisitionFrameRate
-                # params['ExposureTime'] = exposureTime
-                # params['ConveyorSpeed'] = conveyorSpeed
-                # re["content"] = params
-                # re["statusCode"] = 200
 
             # 修改设备参数
             elif re['type'] == 'alterParams':
                 # 获取Java端传过来的设备参数值
                 params = re['content']
                 print("java端传过来的设备参数值：",params)
-                self._mainW.setCameraParams(params,'left')
+                # self._mainW.setCameraParams(params,'left')
+                if params['cameraOrientation'] == '左':
+                    params['cameraOrientation'] = 'left'
+                print(params['cameraOrientation'])
+                self._mainW.setCameraParams(params,params['cameraOrientation'])
                 self._mainW.setConveyorSpeed(params)
-                re["content"] = "ok"
+                nparray = self._mainW.camManager.getOneFrame(params['cameraOrientation'])
+                imgBGR = cv2.cvtColor(nparray, cv2.COLOR_RGB2BGR)
+                # cvRGBImg = cv2.cvtColor(imgBGR, cv2.COLOR_RGB2BGR)
+                encode_image = cv2.imencode(".jpg", imgBGR)[1]
+                byte_data = encode_image.tobytes()
+                base64_str = base64.b64encode(byte_data).decode("ascii")
+                params = self._mainW.getParams(params['cameraOrientation'])
+                speedParam = self._mainW.getConveyorSpeed()
+                params.update(speedParam)
                 re['type'] = 'setDeviceParamsReply'
+                params['ImageResult'] = base64_str
+                re['content'] = params
                 re['statusCode'] = 200
-                # # 得到各项参数值
-                # height = params['height']
-                # # print("height值为：" + height)
-                # width = params['width']
-                # exTime = params['exTime']
-                # acquisitionRate = params['acquisitionRate']
-                # conveyorSpeed = params['conveyorSpeed']
-                # self.cameraManager = CamManager()
-                # self.cameraManager.getDeviceInfo(self.cameraManager.deviceList.pDeviceInfo[0])
-                # self.camera = self.cameraManager.openDevice(0)
-                # self.camera.setParam("Height", int(height))
-                # self.camera.setParam("Width", int(width))
-                # self.camera.setParam("AcquisitionFrameRate", float(acquisitionRate))
-                # self.camera.setParam("ExposureTime", float(exTime))
-                # # self.plc_conveyorSpeed.connect_200smart("192.168.3.50")
-                # self.conveyor.setSpeed(float(conveyorSpeed))
-                # self.camera.closeDevice()
 
             sendmsg = json.dumps(re)
             print("修改JSON数据并发送：")
@@ -152,7 +140,6 @@ class SeverThreading(threading.Thread):
             self._socket.send(("%s" % sendmsg + "\r\n").encode(self._encoding))
             sys.stdout.flush()
             self._socket.close()
-            print('----------')
             pass
 
         except Exception as identifier:

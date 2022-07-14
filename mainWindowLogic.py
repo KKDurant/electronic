@@ -77,19 +77,17 @@ class MainWindowLogic():
             #如果读取到对应信号则
                 print('arrive')
                 # 向java发arrive消息
-                # self.conveyor.stop()
+                self.conveyor.stop()
                 # print('stop')
-                # sleep(1.5)
+                sleep(1.5)
                 # tDoCheck = Thread(target=self.doCheck,args=())
                 # tDoCheck.start()
                 sendImage = SendImageThread()
-                print(111111111111111111111111111)
                 detect = threading.Thread(target=sendImage.connect, args=(self.yoloModel,self.camera,))
                 detect.start()
                 sleep(1)
                 # sleep(0.5)
-                # self.conveyor.run(80)
-
+                self.conveyor.run(80)
 
     def doCheck(self):#对应收到信号后获取图像并拍照检查
         print('check')
@@ -177,8 +175,6 @@ class MainWindowLogic():
         camManager.setOrientation('left', camera)
         return camera
 
-
-
     def getParams(self,orientation:str='left')->dict: # 获取设备参数
 
         params = {}
@@ -202,6 +198,7 @@ class MainWindowLogic():
         self.camManager.setCameraParams(orientation,'Width',int(params['width']))
         self.camManager.setCameraParams(orientation,"AcquisitionFrameRate", float(params['acquisitionRate']))
         self.camManager.setCameraParams(orientation,'ExposureTime',float(params['exTime']))
+
 
     def setConveyorSpeed(self,params):
         self.conveyor.setSpeed((params['conveyorSpeed']))
